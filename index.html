@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+	<head>
+		<meta charset="UTF-8">
+		<title>Controle de Ganhos</title>
+		<meta name="theme-color" content="#3b82f6">
+		<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+		<style>
+			:root{
+			--bg:#0f172a;--card:#111827;--primary:#3b82f6;--secondary:#9ca3af;
+			--border:#1f2933;--text:#e5e7eb;--success:#22c55e;--danger:#ef4444;
+			}
+			body{font-family:Segoe UI;background:var(--bg);color:var(--text);margin:0;padding:30px}
+			.container{max-width:1200px;margin:auto}
+			h1,h3{text-align:center}
+			.card{background:var(--card);border-radius:12px;padding:20px;margin-bottom:25px;box-shadow:0 10px 25px rgba(0,0,0,.4)}
+			.header{display:flex;justify-content:space-between}
+			select,input{background:#020617;color:var(--text);border:1px solid var(--border);padding:8px;border-radius:6px;width:100%}
+			.tabs{display:flex;margin-top:15px}
+			.tab{padding:10px 18px;cursor:pointer;background:#020617;margin-right:6px;border-radius:8px 8px 0 0;color:var(--secondary)}
+			.tab.active{background:var(--primary);color:#fff;font-weight:bold}
+			.content{display:none}
+			.content.active{display:block}
+			table{width:100%;border-collapse:collapse;margin-top:15px}
+			th,td{border:1px solid var(--border);padding:8px;text-align:center}
+			th{background:#020617}
+			.resumo{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+			.resumo div{background:#020617;padding:18px;border-radius:10px;text-align:center}
+			.valor{font-size:22px;font-weight:bold;margin-top:8px}
+			.positivo{color:var(--success)} .negativo{color:var(--danger)}
+			.mes-atual td{outline:2px solid var(--primary)}
+			.heat-0{background:#020617}
+			.heat-1{background:#052e16}
+			.heat-2{background:#064e3b}
+			.heat-3{background:#065f46}
+			.heat-4{background:#22c55e;color:#000}
+			.badge{font-size:11px;padding:4px 6px;border-radius:6px}
+			.melhor{background:var(--success);color:#000}
+			.pior{background:var(--danger)}
+			.toast{
+			position:fixed;bottom:30px;left:50%;transform:translateX(-50%);
+			background:#020617;border:1px solid var(--border);
+			padding:10px 20px;border-radius:8px;opacity:0;transition:.3s
+			}
+			.toast.show{opacity:1}
+			.assinatura{position:fixed;bottom:18px;right:22px;font-size:13px}
+			.resumo-top{
+			display:grid;
+			grid-template-columns:repeat(3,1fr);
+			gap:20px;
+			}
+			.resumo-bottom{
+			display:grid;
+			grid-template-columns:repeat(4,1fr);
+			gap:16px;
+			}
+			.resumo-top div,
+			.resumo-bottom div{
+			background:#020617;
+			padding:18px;
+			border-radius:10px;
+			text-align:center;
+			}
+			/* cards menores */
+			.resumo-bottom .valor{
+			font-size:18px;
+			}
+			/* ---------- Assinatura ---------- */
+			.assinatura {
+			position: fixed;
+			bottom: 18px;
+			right: 22px;
+			text-align: right;
+			font-size: 14px;
+			letter-spacing: 0.6px;
+			user-select: none;
+			opacity: 0.95;
+			}
+			.assinatura strong {
+			color: #b56bff;
+			font-weight: 700;
+			text-shadow:
+			0 0 6px rgba(181, 107, 255, 0.7),
+			0 0 16px rgba(155, 70, 255, 0.5),
+			0 0 28px rgba(120, 40, 220, 0.35);
+			}
+			.assinatura span {
+			display: block;
+			font-size: 11px;
+			color: #d6b8ff;
+			margin-top: 2px;
+			text-shadow: 0 0 5px rgba(181, 107, 255, 0.5);
+			}
+			.assinatura:hover strong {
+			text-shadow:
+			0 0 10px rgba(200, 140, 255, 1),
+			0 0 25px rgba(170, 90, 255, 0.9),
+			0 0 45px rgba(120, 40, 220, 0.8);
+			}
+			.backup-bar{
+			display:flex;
+			justify-content:space-between;
+			align-items:center;
+			gap:12px;
+			background:linear-gradient(135deg,#020617,#0f172a);
+			padding:14px 18px;
+			border-radius:14px;
+			margin:12px 0 25px;
+			border:1px solid #1f2933;
+			}
+			.backup-status{
+			font-size:14px;
+			display:flex;
+			align-items:center;
+			gap:8px;
+			color:#c7d2fe;
+			}
+			.backup-status strong{
+			color:#93c5fd;
+			}
+			.backup-status::before{
+			content:"🕒";
+			filter:drop-shadow(0 0 6px rgba(59,130,246,.7));
+			}
+			.backup-actions{
+			display:flex;
+			gap:10px;
+			}
+			.backup-actions button{
+			background:linear-gradient(135deg,#3b82f6,#2563eb);
+			border-radius:10px;
+			padding:8px 14px;
+			font-size:14px;
+			box-shadow:0 0 12px rgba(59,130,246,.4);
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Controle de Ganhos</h1>
+		<div class="container">
+			<div class="card header">
+				<strong>Ano:</strong>
+				<select id="ano" onchange="trocarAno()">
+					<option>2025</option>
+					<option>2026</option>
+				</select>
+			</div>
+			<div class="backup-bar">
+				<div class="backup-status" id="statusBackup"></div>
+				<div class="backup-actions">
+					<button onclick="exportarBackup()">📦 Backup</button>
+					<input type="file" id="importFile" accept=".json" hidden onchange="importarBackup(event)">
+					<button onclick="document.getElementById('importFile').click()">📥 Importar</button>
+				</div>
+			</div>
+			<div class="card">
+				<!-- TOPO: 3 cards grandes -->
+				<div class="resumo-top">
+					<div>
+						Total Anual
+						<div class="valor" id="totalAnual">R$0</div>
+					</div>
+					<div>
+						Ano Anterior
+						<div class="valor" id="totalAnterior">R$0</div>
+					</div>
+					<div>
+						Diferença
+						<div class="valor" id="diferenca">R$0</div>
+					</div>
+				</div>
+				<br>
+				<!-- BAIXO: 4 cards pequenos -->
+				<div class="resumo-bottom">
+					<div>
+						SALÁRIO
+						<div class="valor" id="total_salario">R$0</div>
+					</div>
+					<div>
+						PETZ
+						<div class="valor" id="total_petz">R$0</div>
+					</div>
+					<div>
+						AMAZON
+						<div class="valor" id="total_amazon">R$0</div>
+					</div>
+					<div>
+						EPSEG
+						<div class="valor" id="total_epseg">R$0</div>
+					</div>
+				</div>
+			</div>
+			<div class="card">
+				<div class="tabs">
+					<div class="tab active" onclick="trocarAba(0)">Salário</div>
+					<div class="tab" onclick="trocarAba(1)">PETZ</div>
+					<div class="tab" onclick="trocarAba(2)">AMAZON</div>
+					<div class="tab" onclick="trocarAba(3)">EPSEG</div>
+				</div>
+				<div id="salario" class="content active"></div>
+				<div id="petz" class="content"></div>
+				<div id="amazon" class="content"></div>
+				<div id="epseg" class="content"></div>
+			</div>
+			<div class="card">
+				<h3 id="tituloComparativo"></h3>
+				<div id="comparativoMensal"></div>
+			</div>
+			<div class="card">
+				<canvas id="graficoAnual"></canvas>
+			</div>
+		</div>
+		<div class="toast" id="toast">✔ Dados salvos</div>
+		<script>
+			const meses=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+			const abas=["salario","petz","amazon","epseg"];
+			let grafico;
+			let trocandoAno = false;
+			
+			function criarTabela(id){
+			let html="<table><tr><th>Mês</th><th>Valor</th></tr>";
+			meses.forEach((m,i)=>{
+			html+=`<tr class="${i===new Date().getMonth()?'mes-atual':''}">
+			<td>${m}</td>
+			<td><input data-id="${id}_${i}" onfocus="salvarCampo(this)" onblur="formatarMoeda(this)" oninput="salvarDados()"></td>
+			</tr>`;
+			});
+			html+="</table>";
+			document.getElementById(id).innerHTML=html;
+			}
+			abas.forEach(criarTabela);
+			
+			
+			function totalPorAba(ano, aba){
+			    const d = JSON.parse(localStorage.getItem("ganhos_" + ano)) || {};
+			    return (d[aba] || []).reduce((s,v)=>s+v,0);
+			}
+			
+			
+			
+			function formatarMoeda(el){
+			let v=parseFloat(el.value.replace(/[^\d]/g,""))/100||0;
+			el.value=v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+			}
+			
+			function salvarCampo(el){
+			localStorage.setItem("ultimoCampo",el.dataset.id);
+			}
+			function salvarAno(){
+			    localStorage.setItem("anoSelecionado", document.getElementById("ano").value);
+			}
+			function trocarAno(){
+			    trocandoAno = true;
+			
+			    salvarAno();        // salva o novo ano
+			    limparInputs();     // limpa visual
+			    carregarDados();    // carrega dados do ano correto
+				atualizarStatusBackup();
+			
+			    trocandoAno = false;
+			}
+			function limparInputs(){
+			    document.querySelectorAll("input[data-id]").forEach(el=>{
+			        el.value = "";
+			    });
+			}
+			
+			function salvarDados(){
+			const ano=anoSel();
+			let dados={};
+			if (trocandoAno) return;
+			abas.forEach(a=>{
+			dados[a]=meses.map((_,i)=>{
+			let el=document.querySelector(`[data-id='${a}_${i}']`);
+			return Number(el.value.replace(/[^\d]/g,""))/100||0;
+			});
+			});
+			localStorage.setItem("ganhos_"+ano,JSON.stringify(dados));
+			toast();
+			atualizarTudo();
+			backupAutomatico();
+			atualizarStatusBackup();
+			
+			}
+			
+			function carregarDados(){
+			const ano=anoSel();
+			const dados=JSON.parse(localStorage.getItem("ganhos_"+ano))||{};
+			abas.forEach(a=>{
+			meses.forEach((_,i)=>{
+			let el=document.querySelector(`[data-id='${a}_${i}']`);
+			if(dados[a]) el.value=(dados[a][i]||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+			});
+			});
+			restaurarCampo();
+			atualizarTudo();
+			}
+			
+			function atualizarTudo(){
+			const ano=anoSel(),ant=ano-1;
+			animar("totalAnual",totalAno(ano));
+			animar("totalAnterior",totalAno(ant));
+			const diff=totalAno(ano)-totalAno(ant);
+			animar("diferenca",diff);
+			gerarComparativo(ano,ant);
+			animar("total_salario", totalPorAba(ano, "salario"));
+			animar("total_petz", totalPorAba(ano, "petz"));
+			animar("total_amazon", totalPorAba(ano, "amazon"));
+			animar("total_epseg", totalPorAba(ano, "epseg"));
+			}
+			
+			function animar(id,valor){
+			let el=document.getElementById(id),i=0;
+			const step=valor/30;
+			const timer=setInterval(()=>{
+			i+=step;
+			if(Math.abs(i)>=Math.abs(valor)){i=valor;clearInterval(timer)}
+			el.innerText=i.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+			},20);
+			}
+			
+			function gerarComparativo(ano,ant){
+			let atual=totais(ano),antigo=totais(ant);
+			let max=Math.max(...atual),min=Math.min(...atual);
+			let html="<table><tr><th>Mês</th><th>"+ant+"</th><th>"+ano+"</th><th></th></tr>";
+			meses.forEach((m,i)=>{
+			let heat=Math.min(4,Math.floor((atual[i]/max)*4));
+			let badge=atual[i]==max?"<span class='badge melhor'>Melhor</span>":
+			atual[i]==min?"<span class='badge pior'>Pior</span>":"";
+			html+=`<tr class="heat-${heat}">
+			<td>${m}</td>
+			<td>${antigo[i].toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</td>
+			<td>${atual[i].toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</td>
+			<td>${badge}</td>
+			</tr>`;
+			});
+			html+="</table>";
+			document.getElementById("comparativoMensal").innerHTML=html;
+			}
+			
+			function totais(ano){
+			const d=JSON.parse(localStorage.getItem("ganhos_"+ano))||{};
+			return meses.map((_,i)=>abas.reduce((s,a)=>s+(d[a]?.[i]||0),0));
+			}
+			
+			function totalAno(a){return totais(a).reduce((x,y)=>x+y,0);}
+			function anoSel(){return Number(document.getElementById("ano").value);}
+			
+			function toast(){
+			const t=document.getElementById("toast");
+			t.classList.add("show");
+			setTimeout(()=>t.classList.remove("show"),1200);
+			}
+			
+			function restaurarCampo(){
+			    if (trocandoAno) return; 
+			
+			    const id = localStorage.getItem("ultimoCampo");
+			    if(id){
+			        const el = document.querySelector(`[data-id='${id}']`);
+			        if(el) el.focus();
+			    }
+			}
+			
+			function trocarAba(i){
+			document.querySelectorAll(".tab").forEach((t,x)=>t.classList.toggle("active",x===i));
+			document.querySelectorAll(".content").forEach((c,x)=>c.classList.toggle("active",x===i));
+			localStorage.setItem("abaAtiva",i);
+			}
+			
+			// restaura ANO primeiro
+			const anoSalvo = localStorage.getItem("anoSelecionado");
+			if (anoSalvo) {
+			    document.getElementById("ano").value = anoSalvo;
+			}
+			
+			// restaura ABA depois
+			const abaSalva = localStorage.getItem("abaAtiva");
+			if (abaSalva !== null) {
+			    trocarAba(Number(abaSalva));
+			}
+			
+			// só AGORA carrega os dados
+			carregarDados();
+			
+			function atualizarStatusBackup(){
+				const info = localStorage.getItem("ultimoBackup");
+			
+				const el = document.getElementById("statusBackup");
+			
+				if(info){
+					el.innerHTML = `Último backup <strong>${info}</strong>`;
+				}else{
+					el.innerHTML = `Nenhum backup realizado ainda`;
+				}
+			}
+			
+			function exportarBackup(){
+				const agora = new Date();
+				const dataHora = agora.toLocaleString("pt-BR");
+			
+				const pacote = {
+					ultimoBackup: dataHora,
+					dados: {...localStorage}
+				};
+			
+				const blob = new Blob(
+					[JSON.stringify(pacote, null, 2)],
+					{type:"application/json"}
+				);
+			
+				const a = document.createElement("a");
+				a.href = URL.createObjectURL(blob);
+				a.download = "backup-ganhos.json";
+				a.click();
+				URL.revokeObjectURL(a.href);
+			
+				localStorage.setItem("ultimoBackup", dataHora);
+				atualizarStatusBackup();
+			}
+			
+			function importarBackup(e){
+				const file = e.target.files[0];
+				if(!file) return;
+			
+				const reader = new FileReader();
+				reader.onload = () => {
+					const pacote = JSON.parse(reader.result);
+			
+					if(pacote.dados){
+						Object.keys(pacote.dados).forEach(k=>{
+							localStorage.setItem(k, pacote.dados[k]);
+						});
+					}
+			
+					if(pacote.ultimoBackup){
+						localStorage.setItem("ultimoBackup", pacote.ultimoBackup);
+					}
+			
+					atualizarStatusBackup();
+					location.reload();
+				};
+			
+				reader.readAsText(file);
+			}
+			
+			atualizarStatusBackup();
+			
+			
+		</script>
+		<div class="assinatura">
+			<strong>by hiro v1.1</strong>
+			<span>financial dashboard</span>
+		</div>
+	</body>
+</html>  
