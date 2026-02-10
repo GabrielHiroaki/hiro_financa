@@ -310,7 +310,7 @@
 			  // Passa os dadosFirebase para atualizarTudo
 			  await atualizarTudo(dadosFirebase);
 			  // Checa queda instantânea
-			  checarQueda(); // compara com ano anterior
+			  await checarQueda(); // compara com ano anterior
 			}
 			function formatarMoeda(el){
 			let v=parseFloat(el.value.replace(/[^\d]/g,""))/100||0;
