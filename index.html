@@ -253,10 +253,6 @@
 			}
 			abas.forEach(criarTabela);
 			
-			function totalPorAba(aba){
-			  return (dadosFirebase[aba] || []).reduce((s,v)=>s+v,0);
-			}
-			
 			function formatarMoeda(el){
 			let v=parseFloat(el.value.replace(/[^\d]/g,""))/100||0;
 			el.value=v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
@@ -274,7 +270,6 @@
 			    salvarAno();        // salva o novo ano
 			    limparInputs();     // limpa visual
 			    carregarDados();    // carrega dados do ano correto
-				atualizarStatusBackup();
 			
 			    trocandoAno = false;
 			}
@@ -285,22 +280,27 @@
 			}
 			
 			async function salvarDados(){
-			const ano=anoSel();
-			let dados={};
-			if (trocandoAno) return;
-			abas.forEach(a=>{
-			dados[a]=meses.map((_,i)=>{
-			let el=document.querySelector(`[data-id='${a}_${i}']`);
-			return Number(el.value.replace(/[^\d]/g,""))/100||0;
-			});
-			});
-			await setDoc(doc(db, "ganhos", String(ano)), dados);
-			toast();
-			atualizarTudo();
-			backupAutomatico();
-			atualizarStatusBackup();
+			  if (trocandoAno) return;
 			
+			  const ano = anoSel();
+			  let dados = {};
+			
+			  abas.forEach(a=>{
+			    dados[a] = meses.map((_,i)=>{
+			      let el = document.querySelector(`[data-id='${a}_${i}']`);
+			      return Number(el.value.replace(/[^\d]/g,""))/100 || 0;
+			    });
+			  });
+			
+			  // ✅ atualiza memória local antes de salvar
+			  dadosFirebase = dados;
+			
+			  await setDoc(doc(db, "ganhos", String(ano)), dados);
+			
+			  atualizarTudo();
+			  toast();
 			}
+
 			
 			async function carregarDados(){
 			  const ano = anoSel();
@@ -414,69 +414,48 @@
 			(async ()=>{
 			  await carregarDados();
 			})();
+		
 			
-			function atualizarStatusBackup(){
-				const info = localStorage.getItem("ultimoBackup");
+			async function exportarBackup(){
+			  const ano = anoSel();
+			  const snap = await getDoc(doc(db,"ganhos",String(ano)));
 			
-				const el = document.getElementById("statusBackup");
+			  const pacote = {
+			    ano,
+			    data: new Date().toLocaleString("pt-BR"),
+			    dados: snap.exists() ? snap.data() : {}
+			  };
 			
-				if(info){
-					el.innerHTML = `Último backup <strong>${info}</strong>`;
-				}else{
-					el.innerHTML = `Nenhum backup realizado ainda`;
-				}
+			  const blob = new Blob(
+			    [JSON.stringify(pacote,null,2)],
+			    {type:"application/json"}
+			  );
+			
+			  const a = document.createElement("a");
+			  a.href = URL.createObjectURL(blob);
+			  a.download = `backup-${ano}.json`;
+			  a.click();
 			}
+
 			
-			function exportarBackup(){
-				const agora = new Date();
-				const dataHora = agora.toLocaleString("pt-BR");
+			async function importarBackup(e){
+			  const file = e.target.files[0];
+			  if(!file) return;
 			
-				const pacote = {
-					ultimoBackup: dataHora,
-					dados: {...localStorage}
-				};
+			  const reader = new FileReader();
+			  reader.onload = async () => {
+			    const pacote = JSON.parse(reader.result);
 			
-				const blob = new Blob(
-					[JSON.stringify(pacote, null, 2)],
-					{type:"application/json"}
-				);
+			    await setDoc(
+			      doc(db,"ganhos",String(pacote.ano)),
+			      pacote.dados
+			    );
 			
-				const a = document.createElement("a");
-				a.href = URL.createObjectURL(blob);
-				a.download = "backup-ganhos.json";
-				a.click();
-				URL.revokeObjectURL(a.href);
+			    await carregarDados();
+			  };
 			
-				localStorage.setItem("ultimoBackup", dataHora);
-				atualizarStatusBackup();
+			  reader.readAsText(file);
 			}
-			
-			function importarBackup(e){
-				const file = e.target.files[0];
-				if(!file) return;
-			
-				const reader = new FileReader();
-				reader.onload = () => {
-					const pacote = JSON.parse(reader.result);
-			
-					if(pacote.dados){
-						Object.keys(pacote.dados).forEach(k=>{
-							localStorage.setItem(k, pacote.dados[k]);
-						});
-					}
-			
-					if(pacote.ultimoBackup){
-						localStorage.setItem("ultimoBackup", pacote.ultimoBackup);
-					}
-			
-					atualizarStatusBackup();
-					location.reload();
-				};
-			
-				reader.readAsText(file);
-			}
-			
-			atualizarStatusBackup();
 			
 			
 		</script>
