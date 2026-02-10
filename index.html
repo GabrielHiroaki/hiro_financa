@@ -356,6 +356,7 @@
 			
 			async function carregarDados(){
 			  const ano = anoSel();
+			  dadosFirebase = {}; // ⬅ reset antes
 			  const snap = await getDoc(doc(db,"ganhos",String(ano))); 
 			  dadosFirebase = snap.exists() ? snap.data() : {};
 			
