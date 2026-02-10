@@ -412,16 +412,20 @@
 			        const atual = abas.reduce((s, a) => s + (dadosFirebase[a]?.[mes] || 0), 0);
 			        const anterior = abas.reduce((s, a) => s + (dadosAnt[a]?.[mes] || 0), 0);
 			
-			        // Ignora meses zerados
 			        if (atual === 0 || anterior === 0) return;
 			
 			        const queda = ((atual - anterior) / anterior) * 100;
 			        if (queda <= -20) {
-			            // mostra toast apenas quando a queda for relevante
-			            mostrarToast(`⚠️ Atenção! Rendimento caiu mais de 20% (${meses[mes]})`);
+			            // Verifica se já mostramos a mensagem para este ano+mes
+			            const key = `alertaQueda_${anoAtual}_${mes}`;
+			            if (!localStorage.getItem(key)) {
+			                mostrarToast(`⚠️ Atenção! Rendimento caiu mais de 20% (${meses[mes]})`);
+			                localStorage.setItem(key, "1"); // marca como exibido
+			            }
 			        }
 			    });
 			}
+
 			// Função para mostrar toast padronizado
 			function mostrarToast(msg) {
 			    const t = document.getElementById("toast");
