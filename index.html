@@ -277,19 +277,15 @@
 			function salvarAno(){
 			    localStorage.setItem("anoSelecionado", document.getElementById("ano").value);
 			}
-			function trocarAno(){
-			    trocandoAno = true;
+			async function trocarAno(){
 			
-			    salvarAno();        // salva o novo ano
-			    limparInputs();     // limpa visual
-			    carregarDados();    // carrega dados do ano correto
+			  trocandoAno = true;
 			
-			    trocandoAno = false;
-			}
-			function limparInputs(){
-			    document.querySelectorAll("input[data-id]").forEach(el=>{
-			        el.value = "";
-			    });
+			  salvarAno();
+			
+			  await carregarDados();   // ⬅ espera Firebase terminar
+			
+			  trocandoAno = false;
 			}
 			
 			async function salvarDados(){
