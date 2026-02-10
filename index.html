@@ -365,7 +365,8 @@
 			  }
 			}
 			function progressoMes(i){
-			  let p = (atual[i] / metaMensal) * 100;
+			  const vals = totais();
+			  let p = (vals[i] / metaMensal) * 100;
 			  return Math.min(100, Math.max(0, p));
 			}
 			function previsaoAnual(){
@@ -492,6 +493,7 @@
 				
 				html += "</table>";
 				document.getElementById("comparativoMensal").innerHTML = html;
+			}
 			
 			function totais(){
 			  return meses.map((_,i)=>
