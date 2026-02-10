@@ -276,6 +276,7 @@
 			window.getDoc = getDoc;
 		</script>
 		<script>
+			let debounceTimer;
 			let metaMensal = 3500;
 			let dadosFirebase = {};
 			const meses=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
@@ -302,20 +303,31 @@
 			abas.forEach(criarTabela);
 			
 			async function lerInputsTempoReal(){
-			  let dados = {};
-			  abas.forEach(a=>{
-			    dados[a] = meses.map((_,i)=>{
-			      let el = document.querySelector(`[data-id='${a}_${i}']`);
-			      return Number(el.value.replace(/[^\d]/g,""))/100 || 0;
-			    });
-			  });
+			    clearTimeout(debounceTimer); // limpa qualquer timer anterior
+			    const inputAlterado = el; // captura o input que disparou o evento
 			
-			  dadosFirebase = dados;
+			    debounceTimer = setTimeout(async () => {
+			        let dados = {};
+			        abas.forEach(a => {
+			            dados[a] = meses.map((_, i) => {
+			                const el = document.querySelector(`[data-id='${a}_${i}']`);
+			                return Number(el.value.replace(/[^\d]/g, "")) / 100 || 0;
+			            });
+			        });
 			
-			  // Passa os dadosFirebase para atualizarTudo
-			  await atualizarTudo(dadosFirebase);
-			  // Checa queda instantânea
-			  await checarQueda(); // compara com ano anterior
+			        dadosFirebase = dados;
+			
+			        // Atualiza totais, gráficos e comparativos
+			        await atualizarTudo(dadosFirebase);
+			
+			        // Checa queda apenas para o mês alterado
+			        if(inputAlterado){
+			            const parts = inputAlterado.dataset.id.split("_");
+			            const mes = Number(parts[1]);
+			            await checarQueda(undefined, mes);
+			        }
+			
+			    }, 300); // debounce mais rápido
 			}
 			function formatarMoeda(el){
 			let v=parseFloat(el.value.replace(/[^\d]/g,""))/100||0;
@@ -389,10 +401,10 @@
 			}
 
 			async function checarQueda(ano, mesAlterado) {
-			    // Se não passar o mês, checa todos os meses
 			    const mesesParaChecar = mesAlterado !== undefined ? [mesAlterado] : Array.from({length:12}, (_,i)=>i);
-			
 			    const anoAtual = ano || anoSel();
+			
+			    // Pega dados do ano anterior apenas uma vez
 			    const snapAnt = await getDoc(doc(db, "ganhos", String(anoAtual - 1)));
 			    const dadosAnt = snapAnt.exists() ? snapAnt.data() : {};
 			
@@ -400,8 +412,7 @@
 			        const atual = abas.reduce((s, a) => s + (dadosFirebase[a]?.[mes] || 0), 0);
 			        const anterior = abas.reduce((s, a) => s + (dadosAnt[a]?.[mes] || 0), 0);
 			
-			        if (atual === 0) return; // ❌ Se não preencheu, ignora o alerta
-			        if (anterior === 0) return; // evita dividir por zero
+			        if (atual === 0 || anterior === 0) return;
 			
 			        const queda = ((atual - anterior) / anterior) * 100;
 			        if (queda <= -20) {
@@ -409,6 +420,7 @@
 			        }
 			    });
 			}
+
 
 			function progressoMes(i){
 			  const vals = totais();
