@@ -298,7 +298,6 @@
 			
 			function lerInputsTempoReal(){
 			  let dados = {};
-			
 			  abas.forEach(a=>{
 			    dados[a] = meses.map((_,i)=>{
 			      let el = document.querySelector(`[data-id='${a}_${i}']`);
@@ -307,7 +306,9 @@
 			  });
 			
 			  dadosFirebase = dados;
-			  atualizarTudo();
+			
+			  // Passa os dadosFirebase para atualizarTudo
+			  atualizarTudo(dadosFirebase);
 			}
 			function formatarMoeda(el){
 			let v=parseFloat(el.value.replace(/[^\d]/g,""))/100||0;
