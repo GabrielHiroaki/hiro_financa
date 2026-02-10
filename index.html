@@ -384,20 +384,17 @@
 			  const atual = valores[mesAtual];
 			  if(atual === 0) return; // se o mês atual ainda não tem valor, não checa
 			
-			  // pega dados do ano anterior
 			  const anoAnterior = anoSel() - 1;
 			  const snap = await getDoc(doc(db,"ganhos",String(anoAnterior)));
 			  const dadosAnt = snap.exists() ? snap.data() : {};
 			
-			  // total do mesmo mês no ano anterior
 			  const anterior = abas.reduce((s,a)=> s + (dadosAnt[a]?.[mesAtual] || 0), 0);
-			  if(anterior === 0) return; // se não houver valor no ano passado, não checa
+			  if(anterior === 0) return;
 			
 			  const queda = ((atual - anterior) / anterior) * 100;
 			
-			  if(queda <= -20 && !sessionStorage.getItem("alertaQueda")){
+			  if(queda <= -20){
 			    alert(`⚠️ Atenção! Seu rendimento caiu mais de 20% comparado ao mesmo mês do ano passado (${meses[mesAtual]})`);
-			    sessionStorage.setItem("alertaQueda", "1");
 			  }
 			}
 
