@@ -293,7 +293,7 @@
 				                <input data-id="${id}_${i}" 
 				                       onfocus="salvarCampo(this)" 
 				                       onblur="formatarMoeda(this); salvarDados(this)" 
-				                       oninput="lerInputsTempoReal()">
+				                       oninput="lerInputsTempoReal(this)">
 				            </td>
 				         </tr>`;
 			});
@@ -302,7 +302,7 @@
 			}
 			abas.forEach(criarTabela);
 			
-			async function lerInputsTempoReal(){
+			async function lerInputsTempoReal(el){
 			    clearTimeout(debounceTimer); // limpa qualquer timer anterior
 			    const inputAlterado = el; // captura o input que disparou o evento
 			
