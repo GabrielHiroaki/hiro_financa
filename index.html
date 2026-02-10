@@ -252,7 +252,7 @@
 			document.getElementById(id).innerHTML=html;
 			}
 			abas.forEach(criarTabela);
-			setTimeout(carregarDados, 50);
+
 			function lerInputsTempoReal(){
 			  let dados = {};
 			
@@ -453,12 +453,6 @@
 			    trocarAba(Number(abaSalva));
 			}
 			
-			// só AGORA carrega os dados
-			window.addEventListener("load", async () => {
-			  await carregarDados();
-			  atualizarStatusBackup();
-			});
-			
 			function atualizarStatusBackup(){
 			  const info = localStorage.getItem("ultimoBackup");
 			  const el = document.getElementById("statusBackup");
@@ -519,9 +513,22 @@
 			
 			  reader.readAsText(file);
 			}
-			window.addEventListener("load", () => {
-			 atualizarStatusBackup();
-			});
+		window.addEventListener("load", async () => {
+		
+		  const anoSalvo = localStorage.getItem("anoSelecionado");
+		  if (anoSalvo) {
+		    document.getElementById("ano").value = anoSalvo;
+		  }
+		
+		  const abaSalva = localStorage.getItem("abaAtiva");
+		  if (abaSalva !== null) {
+		    trocarAba(Number(abaSalva));
+		  }
+		
+		  await carregarDados();   // ⬅ ESPERA Firebase terminar
+		
+		  atualizarStatusBackup(); 
+		});
 		</script>
 		<div class="assinatura">
 			<strong>by hiro v1.1</strong>
