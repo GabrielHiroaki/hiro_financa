@@ -319,13 +319,6 @@
 			
 			        // Atualiza totais, gráficos e comparativos
 			        await atualizarTudo(dadosFirebase);
-			
-			        // Checa queda apenas para o mês alterado
-			        if(inputAlterado){
-			            const parts = inputAlterado.dataset.id.split("_");
-			            const mes = Number(parts[1]);
-			        }
-			
 			    }, 300); // debounce mais rápido
 			}
 			function formatarMoeda(el){
@@ -370,12 +363,6 @@
 			  atualizarTudo();
 			  toast();
 			
-			  // checa queda **apenas para o mês alterado**
-			  if(el){
-			    const parts = el.dataset.id.split("_");
-			    const aba = parts[0];
-			    const mes = Number(parts[1]);
-			  }
 			}
 			
 			async function carregarDados(){
