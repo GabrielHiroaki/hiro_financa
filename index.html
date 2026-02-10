@@ -288,7 +288,7 @@
 			meses.forEach((m,i)=>{
 			html+=`<tr class="${i===new Date().getMonth()?'mes-atual':''}">
 			<td>${m}</td>
-			<td><input data-id="${id}_${i}" onfocus="salvarCampo(this)" onblur="formatarMoeda(this); salvarDados()" oninput="lerInputsTempoReal()"></td>
+			<input data-id="${id}_${i}" onfocus="salvarCampo(this)" onblur="formatarMoeda(this); salvarDados(this)" oninput="lerInputsTempoReal()">
 			</tr>`;
 			});
 			html+="</table>";
@@ -334,28 +334,34 @@
 			  trocandoAno = false;
 			}
 			
-			async function salvarDados(){
+			async function salvarDados(el) {
 			  if (trocandoAno) return;
 			
 			  const ano = anoSel();
 			  let dados = {};
 			
-			  abas.forEach(a=>{
-			    dados[a] = meses.map((_,i)=>{
-			      let el = document.querySelector(`[data-id='${a}_${i}']`);
-			      return Number(el.value.replace(/[^\d]/g,""))/100 || 0;
+			  abas.forEach(a => {
+			    dados[a] = meses.map((_, i) => {
+			      let input = document.querySelector(`[data-id='${a}_${i}']`);
+			      return Number(input.value.replace(/[^\d]/g, "")) / 100 || 0;
 			    });
 			  });
 			
-			  // ✅ atualiza memória local antes de salvar
 			  dadosFirebase = dados;
 			
 			  await setDoc(doc(db, "ganhos", String(ano)), dados);
 			
 			  atualizarTudo();
 			  toast();
-			}
 			
+			  // checa queda **apenas para o mês alterado**
+			  if(el){
+			    const parts = el.dataset.id.split("_");
+			    const aba = parts[0];
+			    const mes = Number(parts[1]);
+			    checarQueda(ano, mes);
+			  }
+			}
 			
 			async function carregarDados(){
 			    const ano = anoSel();
@@ -377,24 +383,21 @@
 			    await atualizarTudo(dadosAnoAtual);
 			}
 
-			async function checarQueda(){
-			  const valores = totais(); // todos os meses do ano
-			  const mesAtual = new Date().getMonth(); // pega o mês real
+			async function checarQueda(ano, mesAlterado) {
+			  const atual = abas.reduce((s, a) => s + (dadosFirebase[a]?.[mesAlterado] || 0), 0);
+			  if (atual === 0) return;
 			
-			  const atual = valores[mesAtual];
-			  if(atual === 0) return; // se o mês atual ainda não tem valor, não checa
-			
-			  const anoAnterior = anoSel() - 1;
-			  const snap = await getDoc(doc(db,"ganhos",String(anoAnterior)));
+			  const anoAnterior = ano - 1;
+			  const snap = await getDoc(doc(db, "ganhos", String(anoAnterior)));
 			  const dadosAnt = snap.exists() ? snap.data() : {};
 			
-			  const anterior = abas.reduce((s,a)=> s + (dadosAnt[a]?.[mesAtual] || 0), 0);
-			  if(anterior === 0) return;
+			  const anterior = abas.reduce((s, a) => s + (dadosAnt[a]?.[mesAlterado] || 0), 0);
+			  if (anterior === 0) return;
 			
 			  const queda = ((atual - anterior) / anterior) * 100;
 			
-			  if(queda <= -20){
-			    alert(`⚠️ Atenção! Seu rendimento caiu mais de 20% comparado ao mesmo mês do ano passado (${meses[mesAtual]})`);
+			  if (queda <= -20) {
+			    alert(`⚠️ Atenção! Seu rendimento caiu mais de 20% comparado ao mesmo mês do ano passado (${meses[mesAlterado]})`);
 			  }
 			}
 
