@@ -355,8 +355,6 @@
 			
 			  animar("diferenca", totalAno() - totalAnt);
 			})();
-			const diff = totalAno();
-			animar("diferenca",diff);
 			gerarComparativo(ano,ant);
 			animar("total_salario", totalPorAba("salario"));
 			animar("total_petz", totalPorAba("petz"));
@@ -400,7 +398,7 @@
 			    </strong>
 			  `;
 			
-			  let max = Math.max(...atual);
+			 let max = Math.max(...atual.filter(v => v > 0));
 			
 			  let html = `
 			  <table>
