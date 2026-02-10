@@ -400,6 +400,7 @@
 			        const atual = abas.reduce((s, a) => s + (dadosFirebase[a]?.[mes] || 0), 0);
 			        const anterior = abas.reduce((s, a) => s + (dadosAnt[a]?.[mes] || 0), 0);
 			
+			        if (atual === 0) return; // ❌ Se não preencheu, ignora o alerta
 			        if (anterior === 0) return; // evita dividir por zero
 			
 			        const queda = ((atual - anterior) / anterior) * 100;
@@ -408,7 +409,6 @@
 			        }
 			    });
 			}
-
 
 			function progressoMes(i){
 			  const vals = totais();
