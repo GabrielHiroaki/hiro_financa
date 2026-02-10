@@ -245,14 +245,26 @@
 			meses.forEach((m,i)=>{
 			html+=`<tr class="${i===new Date().getMonth()?'mes-atual':''}">
 			<td>${m}</td>
-			<td><input data-id="${id}_${i}" onfocus="salvarCampo(this)" onblur="formatarMoeda(this)" oninput="salvarDados()"></td>
+			<td><input data-id="${id}_${i}" onfocus="salvarCampo(this)" onblur="formatarMoeda(this); salvarDados()" oninput="lerInputsTempoReal()"></td>
 			</tr>`;
 			});
 			html+="</table>";
 			document.getElementById(id).innerHTML=html;
 			}
 			abas.forEach(criarTabela);
+			function lerInputsTempoReal(){
+			  let dados = {};
 			
+			  abas.forEach(a=>{
+			    dados[a] = meses.map((_,i)=>{
+			      let el = document.querySelector(`[data-id='${a}_${i}']`);
+			      return Number(el.value.replace(/[^\d]/g,""))/100 || 0;
+			    });
+			  });
+			
+			  dadosFirebase = dados;
+			  atualizarTudo();
+			}
 			function formatarMoeda(el){
 			let v=parseFloat(el.value.replace(/[^\d]/g,""))/100||0;
 			el.value=v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
@@ -300,7 +312,7 @@
 			  atualizarTudo();
 			  toast();
 			}
-
+			
 			
 			async function carregarDados(){
 			  const ano = anoSel();
@@ -311,7 +323,8 @@
 			    meses.forEach((_,i)=>{
 			      let el=document.querySelector(`[data-id='${a}_${i}']`);
 			      if(dadosFirebase[a]) 
-			        el.value=(dadosFirebase[a][i]||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+			        el.value = (dadosFirebase[a]?.[i] || 0)
+					 .toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 			    });
 			  });
 			
@@ -321,7 +334,8 @@
 			
 			function atualizarTudo(){
 			const ano=anoSel(),ant=ano-1;
-			animar("totalAnual", totalAno());
+			document.getElementById("totalAnual").innerText =
+			 totalAno().toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 			const diff = totalAno();
 			animar("diferenca",diff);
 			gerarComparativo(ano,ant);
@@ -341,25 +355,53 @@
 			},20);
 			}
 			
-			function gerarComparativo(ano,ant){
+			async function gerarComparativo(ano, ant){
+			
+			  // ano atual (já está em memória)
 			  let atual = totais();
-			  let antigo = totais(); 
-			let max=Math.max(...atual),min=Math.min(...atual);
-			let html="<table><tr><th>Mês</th><th>"+ant+"</th><th>"+ano+"</th><th></th></tr>";
-			meses.forEach((m,i)=>{
-			let heat=Math.min(4,Math.floor((atual[i]/max)*4));
-			let badge=atual[i]==max?"<span class='badge melhor'>Melhor</span>":
-			atual[i]==min?"<span class='badge pior'>Pior</span>":"";
-			html+=`<tr class="heat-${heat}">
-			<td>${m}</td>
-			<td>${antigo[i].toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</td>
-			<td>${atual[i].toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</td>
-			<td>${badge}</td>
-			</tr>`;
-			});
-			html+="</table>";
-			document.getElementById("comparativoMensal").innerHTML=html;
+			
+			  // buscar ano anterior no Firebase
+			  const snap = await getDoc(doc(db, "ganhos", String(ant)));
+			  const dadosAnt = snap.exists() ? snap.data() : {};
+			
+			  // somar meses do ano anterior
+			  let antigo = meses.map((_, i) =>
+			    abas.reduce((s, a) => s + (dadosAnt[a]?.[i] || 0), 0)
+			  );
+			
+			  let max = Math.max(...atual);
+			  let min = Math.min(...atual);
+			
+			  let html = `<table>
+			    <tr>
+			      <th>Mês</th>
+			      <th>${ant}</th>
+			      <th>${ano}</th>
+			      <th></th>
+			    </tr>`;
+			
+			  meses.forEach((m, i) => {
+			
+			    let heat = max ? Math.min(4, Math.floor((atual[i] / max) * 4)) : 0;
+			
+			    let badge =
+			      atual[i] === max && max !== 0 ? "<span class='badge melhor'>Melhor</span>" :
+			      atual[i] === min && max !== 0 ? "<span class='badge pior'>Pior</span>" : "";
+			
+			    html += `
+			      <tr class="heat-${heat}">
+			        <td>${m}</td>
+			        <td>${antigo[i].toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</td>
+			        <td>${atual[i].toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</td>
+			        <td>${badge}</td>
+			      </tr>`;
+			  });
+			
+			  html += "</table>";
+			
+			  document.getElementById("comparativoMensal").innerHTML = html;
 			}
+			
 			
 			function totais(){
 			  return meses.map((_,i)=>
@@ -414,30 +456,30 @@
 			(async ()=>{
 			  await carregarDados();
 			})();
-		
+			
 			
 			async function exportarBackup(){
-			  const ano = anoSel();
-			  const snap = await getDoc(doc(db,"ganhos",String(ano)));
+			  const pacote = {};
+			  const anos = [2025,2026];
 			
-			  const pacote = {
-			    ano,
-			    data: new Date().toLocaleString("pt-BR"),
-			    dados: snap.exists() ? snap.data() : {}
-			  };
+			  for(const ano of anos){
+			    const snap = await getDoc(doc(db,"ganhos",String(ano)));
+			    pacote[ano] = snap.exists() ? snap.data() : {};
+			  }
 			
 			  const blob = new Blob(
-			    [JSON.stringify(pacote,null,2)],
+			    [JSON.stringify({
+			      data: new Date().toLocaleString("pt-BR"),
+			      ganhos: pacote
+			    },null,2)],
 			    {type:"application/json"}
 			  );
 			
 			  const a = document.createElement("a");
 			  a.href = URL.createObjectURL(blob);
-			  a.download = `backup-${ano}.json`;
+			  a.download = `backup-completo.json`;
 			  a.click();
 			}
-
-			
 			async function importarBackup(e){
 			  const file = e.target.files[0];
 			  if(!file) return;
@@ -446,17 +488,19 @@
 			  reader.onload = async () => {
 			    const pacote = JSON.parse(reader.result);
 			
-			    await setDoc(
-			      doc(db,"ganhos",String(pacote.ano)),
-			      pacote.dados
-			    );
+			    for(const ano in pacote.ganhos){
+			      await setDoc(
+			        doc(db,"ganhos",ano),
+			        pacote.ganhos[ano]
+			      );
+			    }
 			
 			    await carregarDados();
+			    alert("Backup restaurado com sucesso!");
 			  };
 			
 			  reader.readAsText(file);
 			}
-			
 			
 		</script>
 		<div class="assinatura">
