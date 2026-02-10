@@ -455,9 +455,19 @@
 			// só AGORA carrega os dados
 			(async ()=>{
 			  await carregarDados();
+			  atualizarStatusBackup();
 			})();
 			
+			function atualizarStatusBackup(){
+			  const info = localStorage.getItem("ultimoBackup");
+			  const el = document.getElementById("statusBackup");
 			
+			  if(info){
+			    el.innerHTML = `Último backup: <strong>${info}</strong>`;
+			  }else{
+			    el.innerHTML = `Nenhum backup realizado ainda`;
+			  }
+			}
 			async function exportarBackup(){
 			  const pacote = {};
 			  const anos = [2025,2026];
@@ -474,7 +484,9 @@
 			    },null,2)],
 			    {type:"application/json"}
 			  );
-			
+			  const agora = new Date().toLocaleString("pt-BR");
+			  localStorage.setItem("ultimoBackup", agora);
+			  atualizarStatusBackup();
 			  const a = document.createElement("a");
 			  a.href = URL.createObjectURL(blob);
 			  a.download = `backup-completo.json`;
@@ -496,6 +508,7 @@
 			    }
 			
 			    await carregarDados();
+				atualizarStatusBackup();
 			    alert("Backup restaurado com sucesso!");
 			  };
 			
