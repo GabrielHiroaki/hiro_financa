@@ -375,31 +375,26 @@
 			    await atualizarTudo(dadosAnoAtual);
 			}
 
-			function checarQueda(){
+			async function checarQueda(){
 			  const valores = totais(); // todos os meses do ano
 			  const mesAtual = new Date().getMonth(); // pega o mês real
 			
-			  // pega o último mês anterior ao mês atual que tenha valor > 0
-			  let mesAnterior = -1;
-			  for(let i = mesAtual - 1; i >= 0; i--){
-			    if(valores[i] > 0){
-			      mesAnterior = i;
-			      break;
-			    }
-			  }
-			
-			  if(mesAnterior === -1) return; // nenhum mês anterior com valor, não checa
-			
 			  const atual = valores[mesAtual];
-			  const anterior = valores[mesAnterior];
+			  if(atual === 0) return; // se o mês atual ainda não tem valor, não checa
 			
-			  // se o mês atual ainda não tem valor, não checa
-			  if(atual === 0) return;
+			  // pega dados do ano anterior
+			  const anoAnterior = anoSel() - 1;
+			  const snap = await getDoc(doc(db,"ganhos",String(anoAnterior)));
+			  const dadosAnt = snap.exists() ? snap.data() : {};
+			
+			  // total do mesmo mês no ano anterior
+			  const anterior = abas.reduce((s,a)=> s + (dadosAnt[a]?.[mesAtual] || 0), 0);
+			  if(anterior === 0) return; // se não houver valor no ano passado, não checa
 			
 			  const queda = ((atual - anterior) / anterior) * 100;
 			
 			  if(queda <= -20 && !sessionStorage.getItem("alertaQueda")){
-			    alert(`⚠️ Atenção! Seu rendimento caiu mais de 20% comparado ao mês anterior (${meses[mesAnterior]})`);
+			    alert(`⚠️ Atenção! Seu rendimento caiu mais de 20% comparado ao mesmo mês do ano passado (${meses[mesAtual]})`);
 			    sessionStorage.setItem("alertaQueda", "1");
 			  }
 			}
