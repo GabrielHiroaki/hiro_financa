@@ -389,22 +389,26 @@
 			}
 
 			async function checarQueda(ano, mesAlterado) {
-			  const atual = abas.reduce((s, a) => s + (dadosFirebase[a]?.[mesAlterado] || 0), 0);
-			  if (atual === 0) return;
+			    // Se não passar o mês, checa todos os meses
+			    const mesesParaChecar = mesAlterado !== undefined ? [mesAlterado] : Array.from({length:12}, (_,i)=>i);
 			
-			  const anoAnterior = ano - 1;
-			  const snap = await getDoc(doc(db, "ganhos", String(anoAnterior)));
-			  const dadosAnt = snap.exists() ? snap.data() : {};
+			    const anoAtual = ano || anoSel();
+			    const snapAnt = await getDoc(doc(db, "ganhos", String(anoAtual - 1)));
+			    const dadosAnt = snapAnt.exists() ? snapAnt.data() : {};
 			
-			  const anterior = abas.reduce((s, a) => s + (dadosAnt[a]?.[mesAlterado] || 0), 0);
-			  if (anterior === 0) return;
+			    mesesParaChecar.forEach(mes => {
+			        const atual = abas.reduce((s, a) => s + (dadosFirebase[a]?.[mes] || 0), 0);
+			        const anterior = abas.reduce((s, a) => s + (dadosAnt[a]?.[mes] || 0), 0);
 			
-			  const queda = ((atual - anterior) / anterior) * 100;
+			        if (anterior === 0) return; // evita dividir por zero
 			
-			  if (queda <= -20) {
-			    alert(`⚠️ Atenção! Seu rendimento caiu mais de 20% comparado ao mesmo mês do ano passado (${meses[mesAlterado]})`);
-			  }
+			        const queda = ((atual - anterior) / anterior) * 100;
+			        if (queda <= -20) {
+			            alert(`⚠️ Atenção! Seu rendimento caiu mais de 20% comparado ao mesmo mês do ano passado (${meses[mes]})`);
+			        }
+			    });
 			}
+
 
 			function progressoMes(i){
 			  const vals = totais();
