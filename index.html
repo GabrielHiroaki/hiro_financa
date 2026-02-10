@@ -411,7 +411,9 @@
 			}
 			
 			// só AGORA carrega os dados
-			carregarDados();
+			(async ()=>{
+			  await carregarDados();
+			})();
 			
 			function atualizarStatusBackup(){
 				const info = localStorage.getItem("ultimoBackup");
