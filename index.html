@@ -286,10 +286,15 @@
 			function criarTabela(id){
 			let html="<table><tr><th>Mês</th><th>Valor</th></tr>";
 			meses.forEach((m,i)=>{
-			html+=`<tr class="${i===new Date().getMonth()?'mes-atual':''}">
-			<td>${m}</td>
-			<input data-id="${id}_${i}" onfocus="salvarCampo(this)" onblur="formatarMoeda(this); salvarDados(this)" oninput="lerInputsTempoReal()">
-			</tr>`;
+				html += `<tr class="${i === new Date().getMonth() ? 'mes-atual' : ''}">
+				            <td>${m}</td>
+				            <td>
+				                <input data-id="${id}_${i}" 
+				                       onfocus="salvarCampo(this)" 
+				                       onblur="formatarMoeda(this); salvarDados(this)" 
+				                       oninput="lerInputsTempoReal()">
+				            </td>
+				         </tr>`;
 			});
 			html+="</table>";
 			document.getElementById(id).innerHTML=html;
