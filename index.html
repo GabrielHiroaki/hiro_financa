@@ -355,23 +355,25 @@
 			
 			
 			async function carregarDados(){
-			  const ano = anoSel();
-			  dadosFirebase = {}; // ⬅ reset antes
-			  const snap = await getDoc(doc(db,"ganhos",String(ano))); 
-			  dadosFirebase = snap.exists() ? snap.data() : {};
+			    const ano = anoSel();
+			    const snap = await getDoc(doc(db,"ganhos",String(ano))); 
+			    const dadosAnoAtual = snap.exists() ? snap.data() : {};
 			
-			  abas.forEach(a=>{
-			    meses.forEach((_,i)=>{
-			      let el=document.querySelector(`[data-id='${a}_${i}']`);
-			      if(dadosFirebase[a]) 
-			        el.value = (dadosFirebase[a]?.[i] || 0)
-					 .toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+			    // carrega dados nas tabelas
+			    abas.forEach(a=>{
+			        meses.forEach((_,i)=>{
+			            let el = document.querySelector(`[data-id='${a}_${i}']`);
+			            if(el) el.value = (dadosAnoAtual[a]?.[i] || 0)
+			                .toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+			        });
 			    });
-			  });
 			
-			  restaurarCampo();
-			  atualizarTudo();
+			    restaurarCampo();
+			
+			    // chama atualizarTudo passando dados explicitamente
+			    await atualizarTudo(dadosAnoAtual);
 			}
+
 			function checarQueda(){
 			  const t = totais().filter(v=>v>0);
 			  if(t.length < 2) return;
@@ -409,35 +411,37 @@
 			  return Math.max(projAtual, totalAnt);
 			}
 
-			function atualizarTudo(){
-			const ano=anoSel(),ant=ano-1;
-			document.getElementById("totalAnual").innerText =
-			 totalAno().toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
-			(async ()=>{
-			  const prev = await previsaoAnualComparativa();
-			  document.getElementById("previsao").innerText =
-			    prev.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
-			})();
-			(async ()=>{
-			  const ant = anoSel() - 1;
-			  const snap = await getDoc(doc(db,"ganhos",String(ant)));
-			  const dadosAnt = snap.exists() ? snap.data() : {};
+			async function atualizarTudo(dadosAtual){
+			    const ano = anoSel();
+			    const ant = ano - 1;
 			
-			  const totalAnt = meses.reduce((t,_,i)=>
-			    t + abas.reduce((s,a)=>s+(dadosAnt[a]?.[i]||0),0)
-			  ,0);
+			    dadosFirebase = dadosAtual; // atualiza global apenas depois
 			
-			  document.getElementById("totalAnterior").innerText =
-			    totalAnt.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+			    // total anual
+				animar("totalAnual", totalAno()); 
 			
-			  animar("diferenca", totalAno() - totalAnt);
-			})();
-			gerarComparativo(ano,ant);
-			animar("total_salario", totalPorAba("salario"));
-			animar("total_petz", totalPorAba("petz"));
-			animar("total_amazon", totalPorAba("amazon"));
-			animar("total_epseg", totalPorAba("epseg"));
-			checarQueda();
+			    // previsão anual
+			    const prev = await previsaoAnualComparativa();
+			    document.getElementById("previsao").innerText =
+			        prev.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+			
+			    // dados ano anterior
+			    const snapAnt = await getDoc(doc(db,"ganhos",String(ant)));
+			    const dadosAnt = snapAnt.exists() ? snapAnt.data() : {};
+			    const totalAnt = meses.reduce((t,_,i)=>
+			        t + abas.reduce((s,a)=>s+(dadosAnt[a]?.[i]||0),0),0
+			    );
+				animar("totalAnterior", totalAnt);
+			    animar("diferenca", totalAno() - totalAnt);
+			
+			    gerarComparativo(ano,ant,dadosAtual,dadosAnt);
+			
+			    animar("total_salario", totalPorAba("salario"));
+			    animar("total_petz", totalPorAba("petz"));
+			    animar("total_amazon", totalPorAba("amazon"));
+			    animar("total_epseg", totalPorAba("epseg"));
+			
+			    checarQueda();
 			}
 			
 			function animar(id,valor){
@@ -450,85 +454,72 @@
 			},20);
 			}
 			
-			async function gerarComparativo(ano, ant){
+			async function gerarComparativo(ano, ant, dadosAtual, dadosAnt){
+			    let atual = meses.map((_,i)=>abas.reduce((s,a)=>s+(dadosAtual[a]?.[i]||0),0));
+			    let antigo = meses.map((_,i)=>abas.reduce((s,a)=>s+(dadosAnt[a]?.[i]||0),0));
 			
-			  let atual = totais();
-			  const snap = await getDoc(doc(db, "ganhos", String(ant)));
-			  const dadosAnt = snap.exists() ? snap.data() : {};
+			    let totalAtual = atual.reduce((a,b)=>a+b,0);
+			    let totalAntigo = antigo.reduce((a,b)=>a+b,0);
 			
-			  let antigo = meses.map((_, i) =>
-			    abas.reduce((s, a) => s + (dadosAnt[a]?.[i] || 0), 0)
-			  );
+			    let diffAno = totalAtual - totalAntigo;
+			    let percAno = totalAntigo ? (diffAno / totalAntigo * 100) : 0;
 			
-			  let totalAtual = atual.reduce((a,b)=>a+b,0);
-			  let totalAntigo = antigo.reduce((a,b)=>a+b,0);
+			    document.getElementById("tituloComparativo").innerHTML = `
+			        ${ant} → ${ano} | 
+			        Diferença anual: 
+			        <strong style="color:${diffAno>=0?'#22c55e':'#ef4444'}">
+			          ${diffAno.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
+			          (${percAno.toFixed(1)}%)
+			        </strong>
+			    `;
 			
-			  let diffAno = totalAtual - totalAntigo;
-			  let percAno = totalAntigo ? (diffAno / totalAntigo * 100) : 0;
+			    let max = Math.max(...atual.filter(v=>v>0), 0);
+			    let html = `<table>
+			        <tr>
+			          <th>Mês</th>
+			          <th>${ant}</th>
+			          <th>${ano}</th>
+			          <th>Δ R$</th>
+			          <th>%</th>
+			          <th>Tendência</th>
+			        </tr>`;
 			
-			  document.getElementById("tituloComparativo").innerHTML = `
-			    ${ant} → ${ano} | 
-			    Diferença anual: 
-			    <strong style="color:${diffAno>=0?'#22c55e':'#ef4444'}">
-			      ${diffAno.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
-			      (${percAno.toFixed(1)}%)
-			    </strong>
-			  `;
+			    meses.forEach((m,i)=>{
+			        if(atual[i] === 0){
+			            html += `<tr class="heat-0">
+			                <td>${m}</td>
+			                <td>${antigo[i].toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</td>
+			                <td style="opacity:.5">— não informado —</td>
+			                <td>—</td>
+			                <td>—</td>
+			                <td>⏳</td>
+			            </tr>`;
+			            return;
+			        }
 			
-			 let max = Math.max(...atual.filter(v => v > 0), 0);
+			        let diff = atual[i] - antigo[i];
+			        let perc = antigo[i] ? (diff/antigo[i]*100) : 0;
+			        let heat = max ? Math.min(4, Math.floor((atual[i]/max)*4)) : 0;
+			        let seta = diff > 0 ? "📈" : diff < 0 ? "📉" : "➖";
+			        let prog = progressoMes(i);
 			
-			  let html = `
-			  <table>
-			    <tr>
-			      <th>Mês</th>
-			      <th>${ant}</th>
-			      <th>${ano}</th>
-			      <th>Δ R$</th>
-			      <th>%</th>
-			      <th>Tendência</th>
-			    </tr>`;
+			        html += `<tr class="heat-${heat}">
+			            <td>${m}</td>
+			            <td>${antigo[i].toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</td>
+			            <td>
+			                ${atual[i].toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
+			                <div class="metaBar"><div style="width:${prog}%"></div></div>
+			            </td>
+			            <td style="color:${diff>=0?'#22c55e':'#ef4444'}">
+			                ${diff.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
+			            </td>
+			            <td>${perc.toFixed(1)}%</td>
+			            <td>${seta}</td>
+			        </tr>`;
+			    });
 			
-				meses.forEach((m,i)=>{
-				
-				  if(atual[i] === 0){
-				    html += `
-				    <tr class="heat-0">
-				      <td>${m}</td>
-				      <td>${antigo[i].toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</td>
-				      <td style="opacity:.5">— não informado —</td>
-				      <td>—</td>
-				      <td>—</td>
-				      <td>⏳</td>
-				    </tr>`;
-				    return;
-				  }
-				
-				  let diff = atual[i] - antigo[i];
-				  let perc = antigo[i] ? (diff/antigo[i]*100) : 0;
-				  let heat = max ? Math.min(4, Math.floor((atual[i]/max)*4)) : 0;
-				  let seta = diff > 0 ? "📈" : diff < 0 ? "📉" : "➖";
-				  let prog = progressoMes(i);
-				
-				  html += `
-				  <tr class="heat-${heat}">
-				    <td>${m}</td>
-				    <td>${antigo[i].toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</td>
-				    <td>
-				      ${atual[i].toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
-				      <div class="metaBar">
-				        <div style="width:${prog}%"></div>
-				      </div>
-				    </td>
-				    <td style="color:${diff>=0?'#22c55e':'#ef4444'}">
-				      ${diff.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
-				    </td>
-				    <td>${perc.toFixed(1)}%</td>
-				    <td>${seta}</td>
-				  </tr>`;
-				});
-				
-				html += "</table>";
-				document.getElementById("comparativoMensal").innerHTML = html;
+			    html += "</table>";
+			    document.getElementById("comparativoMensal").innerHTML = html;
 			}
 			
 			function totais(){
