@@ -354,52 +354,70 @@
 			
 			async function gerarComparativo(ano, ant){
 			
-			  // ano atual (já está em memória)
 			  let atual = totais();
 			
-			  // buscar ano anterior no Firebase
 			  const snap = await getDoc(doc(db, "ganhos", String(ant)));
 			  const dadosAnt = snap.exists() ? snap.data() : {};
 			
-			  // somar meses do ano anterior
 			  let antigo = meses.map((_, i) =>
 			    abas.reduce((s, a) => s + (dadosAnt[a]?.[i] || 0), 0)
 			  );
 			
-			  let max = Math.max(...atual);
-			  let min = atual.filter(v=>v>0).length ? Math.min(...atual.filter(v=>v>0)) : 0;
+			  let totalAtual = atual.reduce((a,b)=>a+b,0);
+			  let totalAntigo = antigo.reduce((a,b)=>a+b,0);
 			
-			  let html = `<table>
+			  let diffAno = totalAtual - totalAntigo;
+			  let percAno = totalAntigo ? (diffAno / totalAntigo * 100) : 0;
+			
+			  document.getElementById("tituloComparativo").innerHTML = `
+			    ${ant} → ${ano} | 
+			    Diferença anual: 
+			    <strong style="color:${diffAno>=0?'#22c55e':'#ef4444'}">
+			      ${diffAno.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
+			      (${percAno.toFixed(1)}%)
+			    </strong>
+			  `;
+			
+			  let max = Math.max(...atual);
+			
+			  let html = `
+			  <table>
 			    <tr>
 			      <th>Mês</th>
 			      <th>${ant}</th>
 			      <th>${ano}</th>
-			      <th></th>
+			      <th>Δ R$</th>
+			      <th>%</th>
+			      <th>Tendência</th>
 			    </tr>`;
 			
-			  meses.forEach((m, i) => {
+			  meses.forEach((m,i)=>{
 			
-			    let heat = max ? Math.min(4, Math.floor((atual[i] / max) * 4)) : 0;
+			    let diff = atual[i] - antigo[i];
+			    let perc = antigo[i] ? (diff/antigo[i]*100) : 0;
 			
-			    let badge =
-			      atual[i] === max && max !== 0 ? "<span class='badge melhor'>Melhor</span>" :
-			      atual[i] === min && max !== 0 ? "<span class='badge pior'>Pior</span>" : "";
+			    let heat = max ? Math.min(4, Math.floor((atual[i]/max)*4)) : 0;
+			
+			    let seta = diff > 0 ? "📈" : diff < 0 ? "📉" : "➖";
 			
 			    html += `
-			      <tr class="heat-${heat}">
-			        <td>${m}</td>
-			        <td>${antigo[i].toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</td>
-			        <td>${atual[i].toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</td>
-			        <td>${badge}</td>
-			      </tr>`;
+			    <tr class="heat-${heat}">
+			      <td>${m}</td>
+			      <td>${antigo[i].toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</td>
+			      <td>${atual[i].toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</td>
+			      <td style="color:${diff>=0?'#22c55e':'#ef4444'}">
+			        ${diff.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
+			      </td>
+			      <td>${perc.toFixed(1)}%</td>
+			      <td>${seta}</td>
+			    </tr>`;
 			  });
 			
 			  html += "</table>";
 			
 			  document.getElementById("comparativoMensal").innerHTML = html;
 			}
-			
-			
+	
 			function totais(){
 			  return meses.map((_,i)=>
 			    abas.reduce((s,a)=>s+(dadosFirebase[a]?.[i]||0),0)
