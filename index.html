@@ -416,10 +416,15 @@
 			
 			        const queda = ((atual - anterior) / anterior) * 100;
 			        if (queda <= -20) {
-			            alert(`⚠️ Atenção! Seu rendimento caiu mais de 20% comparado ao mesmo mês do ano passado (${meses[mes]})`);
+			            // mostra toast personalizado
+			            const t = document.getElementById("toast");
+			            t.innerText = `⚠️ Atenção! Rendimento caiu mais de 20% (${meses[mes]})`;
+			            t.classList.add("show");
+			            setTimeout(() => t.classList.remove("show"), 3000); // toast dura 3 segundos
 			        }
 			    });
 			}
+
 
 
 			function progressoMes(i){
