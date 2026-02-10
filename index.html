@@ -370,7 +370,7 @@
 			  );
 			
 			  let max = Math.max(...atual);
-			  let min = Math.min(...atual);
+			  let min = atual.filter(v=>v>0).length ? Math.min(...atual.filter(v=>v>0)) : 0;
 			
 			  let html = `<table>
 			    <tr>
@@ -507,9 +507,13 @@
 			      );
 			    }
 			
-			    await carregarDados();
+				await carregarDados();
+				
+				const agora = new Date().toLocaleString("pt-BR");
+				localStorage.setItem("ultimoBackup", agora);
 				atualizarStatusBackup();
-			    alert("Backup restaurado com sucesso!");
+				
+				alert("Backup restaurado com sucesso!");
 			  };
 			
 			  reader.readAsText(file);
