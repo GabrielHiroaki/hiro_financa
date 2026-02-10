@@ -462,10 +462,10 @@
 			  const info = localStorage.getItem("ultimoBackup");
 			  const el = document.getElementById("statusBackup");
 			
-			  if(info){
+			  if(info && info !== "null"){
 			    el.innerHTML = `Último backup: <strong>${info}</strong>`;
 			  }else{
-			    el.innerHTML = `Nenhum backup realizado ainda`;
+			    el.innerHTML = `⚠ Nenhum backup foi realizado ainda`;
 			  }
 			}
 			async function exportarBackup(){
