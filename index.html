@@ -365,8 +365,8 @@
 			  }
 			}
 			function progressoMes(i){
-			  const totalMes = abas.reduce((s,a)=>s+(dadosFirebase[a]?.[i]||0),0);
-			  return Math.min(100,(totalMes/metaMensal)*100);
+			  let p = (atual[i] / metaMensal) * 100;
+			  return Math.min(100, Math.max(0, p));
 			}
 			function previsaoAnual(){
 			  const vals = totais().filter(v=>v>0);
@@ -438,7 +438,7 @@
 			    </strong>
 			  `;
 			
-			 let max = Math.max(...atual.filter(v => v > 0));
+			 let max = Math.max(...atual.filter(v => v > 0), 0);
 			
 			  let html = `
 			  <table>
