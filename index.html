@@ -302,25 +302,23 @@
 			}
 			abas.forEach(criarTabela);
 			
-			async function lerInputsTempoReal(el){
-			    clearTimeout(debounceTimer); // limpa qualquer timer anterior
+			async function lerInputsTempoReal(el) {
 			    const inputAlterado = el; // captura o input que disparou o evento
 			
-			    debounceTimer = setTimeout(async () => {
-			        let dados = {};
-			        abas.forEach(a => {
-			            dados[a] = meses.map((_, i) => {
-			                const el = document.querySelector(`[data-id='${a}_${i}']`);
-			                return Number(el.value.replace(/[^\d]/g, "")) / 100 || 0;
-			            });
+			    let dados = {};
+			    abas.forEach(a => {
+			        dados[a] = meses.map((_, i) => {
+			            const el = document.querySelector(`[data-id='${a}_${i}']`);
+			            return Number(el.value.replace(/[^\d]/g, "")) / 100 || 0;
 			        });
+			    });
 			
-			        dadosFirebase = dados;
+			    dadosFirebase = dados;
 			
-			        // Atualiza totais, gráficos e comparativos
-			        await atualizarTudo(dadosFirebase);
-			    }, 300); // debounce mais rápido
+			    // Atualiza totais, gráficos e comparativos
+			    await atualizarTudo(dadosFirebase);
 			}
+
 			function formatarMoeda(el){
 			let v=parseFloat(el.value.replace(/[^\d]/g,""))/100||0;
 			el.value=v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
