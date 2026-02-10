@@ -155,6 +155,18 @@
 		</style>
 	</head>
 	<body>
+		  <!-- LOGIN -->
+		  <div id="loginContainer" style="
+		    position:fixed;top:0;left:0;width:100%;height:100%;background:#0f172a;
+		    display:flex;justify-content:center;align-items:center;z-index:9999;">
+		    <div style="background:#111827;padding:30px;border-radius:12px;width:320px;text-align:center;">
+		      <h2 style="color:#fff;margin-bottom:20px;">Login</h2>
+		      <input type="email" id="loginEmail" placeholder="Email" style="width:100%;padding:10px;margin-bottom:10px;border-radius:6px;border:1px solid #1f2933;background:#020617;color:#e5e7eb;">
+		      <input type="password" id="loginSenha" placeholder="Senha" style="width:100%;padding:10px;margin-bottom:10px;border-radius:6px;border:1px solid #1f2933;background:#020617;color:#e5e7eb;">
+		      <button id="btnLogin" style="width:100%;padding:10px;border:none;border-radius:6px;background:#3b82f6;color:#fff;font-weight:bold;">Entrar</button>
+		      <div id="loginErro" style="color:#ef4444;margin-top:10px;font-size:14px;"></div>
+		    </div>
+		  </div>
 		<h1>Controle de Ganhos</h1>
 		<div class="container">
 			<div class="card header">
@@ -255,6 +267,7 @@
 		<script type="module">
 			import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 			import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+			import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 			
 			const firebaseConfig = {
 			  apiKey: "AIzaSyDQcM-q2jwZMshHnuf-jRfaxeYSmsjNCUs",
@@ -267,11 +280,39 @@
 			
 			const app = initializeApp(firebaseConfig);
 			const db = getFirestore(app);
+			const auth = getAuth(app);
 			
 			window.db = db;
 			window.doc = doc;
 			window.setDoc = setDoc;
 			window.getDoc = getDoc;
+
+			btnLogin.addEventListener("click", () => {
+			  const email = document.getElementById("loginEmail").value;
+			  const senha = document.getElementById("loginSenha").value;
+		
+			  loginErro.innerText = "";
+			  signInWithEmailAndPassword(auth, email, senha)
+				.then(userCredential => {
+				  loginContainer.style.display = "none";
+				  mainContent.style.display = "block";
+				})
+				.catch(error => {
+				  loginErro.innerText = "Email ou senha incorretos!";
+				  console.error(error);
+				});
+			});
+		
+			// Monitora estado do usuário
+			onAuthStateChanged(auth, (user) => {
+			  if (user) {
+				loginContainer.style.display = "none";
+				mainContent.style.display = "block";
+			  } else {
+				loginContainer.style.display = "flex";
+				mainContent.style.display = "none";
+			  }
+			});
 		</script>
 		<script>
 			let debounceTimer;
