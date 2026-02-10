@@ -159,10 +159,7 @@
 		<div class="container">
 			<div class="card header">
 				<strong>Ano:</strong>
-				<select id="ano" onchange="trocarAno()">
-					<option>2025</option>
-					<option>2026</option>
-				</select>
+				<select id="ano" onchange="trocarAno()"></select>
 			</div>
 			<div class="backup-bar">
 				<div class="backup-status" id="statusBackup"></div>
@@ -224,8 +221,32 @@
 			<div class="card">
 				<h3 id="tituloComparativo"></h3>
 				<div id="comparativoMensal"></div>
-				<h4>Previsão do Ano</h4>
-				<span id="previsao">R$ 0,00</span>
+			</div>
+			<div class="card" style="margin-top:20px">
+			  <h3 style="margin-bottom:10px">📊 Previsão Inteligente do Ano</h3>
+			
+			  <div style="
+			    background:linear-gradient(135deg,#020617,#0f172a);
+			    border:1px solid #1f2933;
+			    border-radius:14px;
+			    padding:18px;
+			    text-align:center;
+			  ">
+			    <div style="font-size:13px;color:#93c5fd;letter-spacing:.6px">
+			      Baseada na média atual e no ano anterior
+			    </div>
+			
+			    <div id="previsao" style="
+			      margin-top:10px;
+			      font-size:28px;
+			      font-weight:700;
+			      color:#22c55e;
+			      text-shadow:0 0 14px rgba(34,197,94,.5)
+			    ">
+			      R$ 0,00
+			    </div>
+			  </div>
+			</div>
 			</div>
 			<div class="card">
 				<canvas id="graficoAnual"></canvas>
@@ -359,29 +380,43 @@
 			
 			  const queda = ((atual - anterior) / anterior) * 100;
 			
-			  if(!sessionStorage.getItem("alertaQueda")){
-				alert("⚠️ Atenção! Seu rendimento caiu mais de 20% este mês.");
-			  	sessionStorage.setItem("alertaQueda", "1");
-			  }
+			  if(queda <= -20 && !sessionStorage.getItem("alertaQueda")){
+			  	alert("⚠️ Atenção! Seu rendimento caiu mais de 20% este mês.");
+				sessionStorage.setItem("alertaQueda", "1");
+			   }
 			}
 			function progressoMes(i){
 			  const vals = totais();
 			  let p = (vals[i] / metaMensal) * 100;
 			  return Math.min(100, Math.max(0, p));
 			}
-			function previsaoAnual(){
-			  const vals = totais().filter(v=>v>0);
+			async function previsaoAnualComparativa(){
+			  const vals = totais().filter(v => v > 0);
 			  if(vals.length === 0) return 0;
 			
 			  const media = vals.reduce((a,b)=>a+b,0) / vals.length;
-			  return media * 12;
+			  const projAtual = media * 12;
+			
+			  const anoAnterior = anoSel() - 1;
+			  const snap = await getDoc(doc(db,"ganhos",String(anoAnterior)));
+			  const dadosAnt = snap.exists() ? snap.data() : {};
+			
+			  const totalAnt = meses.reduce((t,_,i)=>
+			    t + abas.reduce((s,a)=>s+(dadosAnt[a]?.[i]||0),0)
+			  ,0);
+			
+			  return Math.max(projAtual, totalAnt);
 			}
+
 			function atualizarTudo(){
 			const ano=anoSel(),ant=ano-1;
 			document.getElementById("totalAnual").innerText =
 			 totalAno().toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
-			document.getElementById("previsao").innerText =
-				 previsaoAnual().toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+			(async ()=>{
+			  const prev = await previsaoAnualComparativa();
+			  document.getElementById("previsao").innerText =
+			    prev.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+			})();
 			(async ()=>{
 			  const ant = anoSel() - 1;
 			  const snap = await getDoc(doc(db,"ganhos",String(ant)));
@@ -556,7 +591,7 @@
 			}
 			async function exportarBackup(){
 			  const pacote = {};
-			  const anos = [2025,2026];
+			  const anos = Array.from({length:5},(_,i)=>2025+i); // gera 2025,2026,2027,2028,2029
 			
 			  for(const ano of anos){
 			    const snap = await getDoc(doc(db,"ganhos",String(ano)));
@@ -606,20 +641,28 @@
 			}
 			window.addEventListener("load", async () => {
 			
-			 const anoSalvo = localStorage.getItem("anoSelecionado");
-			 if (anoSalvo) {
-			   document.getElementById("ano").value = anoSalvo;
-			 }
+			    const selectAno = document.getElementById("ano");
+			    const anos = Array.from({length:5}, (_, i) => 2025 + i); // gera 2025,2026,2027,2028,2029
+			    anos.forEach(ano => {
+			        const option = document.createElement("option");
+			        option.value = ano;
+			        option.textContent = ano;
+			        selectAno.appendChild(option);
+			    });
 			
-			 const abaSalva = localStorage.getItem("abaAtiva");
-			 if (abaSalva !== null) {
-			   trocarAba(Number(abaSalva));
-			 }
+			    // restaura o ano salvo, se houver
+			    const anoSalvo = localStorage.getItem("anoSelecionado");
+			    if (anoSalvo) selectAno.value = anoSalvo;
 			
-			 await carregarDados();   // ⬅ ESPERA Firebase terminar
+			    const abaSalva = localStorage.getItem("abaAtiva");
+			    if (abaSalva !== null) {
+			        trocarAba(Number(abaSalva));
+			    }
 			
-			 atualizarStatusBackup(); 
+			    await carregarDados();   // ⬅ espera Firebase terminar
+			    atualizarStatusBackup(); 
 			});
+
 		</script>
 		<div class="assinatura">
 			<strong>by hiro v2.0</strong>
