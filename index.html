@@ -34,9 +34,9 @@
 			.heat-2{background:rgba(34,197,94,.25)}
 			.heat-3{background:rgba(34,197,94,.35)}
 			.heat-4{
-			  background:rgba(34,197,94,.45);
-			  color:#e5e7eb;
-			  font-weight:600;
+			background:rgba(34,197,94,.45);
+			color:#e5e7eb;
+			font-weight:600;
 			}
 			.badge{font-size:11px;padding:4px 6px;border-radius:6px}
 			.melhor{background:var(--success);color:#000}
@@ -138,8 +138,19 @@
 			box-shadow:0 0 12px rgba(59,130,246,.4);
 			}
 			td[style*="não informado"]{
-			  color:#94a3b8;
-			  font-style:italic;
+			color:#94a3b8;
+			font-style:italic;
+			}
+			.metaBar{
+			background:#020617;
+			height:6px;
+			border-radius:5px;
+			overflow:hidden;
+			}
+			.metaBar div{
+			background:#22c55e;
+			height:100%;
+			transition:.4s;
 			}
 		</style>
 	</head>
@@ -213,6 +224,8 @@
 			<div class="card">
 				<h3 id="tituloComparativo"></h3>
 				<div id="comparativoMensal"></div>
+				<h4>Previsão do Ano</h4>
+				<span id="previsao">R$ 0,00</span>
 			</div>
 			<div class="card">
 				<canvas id="graficoAnual"></canvas>
@@ -242,6 +255,7 @@
 			window.getDoc = getDoc;
 		</script>
 		<script>
+			let metaMensal = 3500;
 			let dadosFirebase = {};
 			const meses=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 			const abas=["salario","petz","amazon","epseg"];
@@ -260,7 +274,7 @@
 			document.getElementById(id).innerHTML=html;
 			}
 			abas.forEach(criarTabela);
-
+			
 			function lerInputsTempoReal(){
 			  let dados = {};
 			
@@ -336,11 +350,37 @@
 			  restaurarCampo();
 			  atualizarTudo();
 			}
+			function checarQueda(){
+			  const t = totais().filter(v=>v>0);
+			  if(t.length < 2) return;
 			
+			  const atual = t[t.length-1];
+			  const anterior = t[t.length-2];
+			
+			  const queda = ((atual - anterior) / anterior) * 100;
+			
+			  if(!sessionStorage.getItem("alertaQueda")){
+				alert("⚠️ Atenção! Seu rendimento caiu mais de 20% este mês.");
+			  	sessionStorage.setItem("alertaQueda", "1");
+			  }
+			}
+			function progressoMes(i){
+			  const totalMes = abas.reduce((s,a)=>s+(dadosFirebase[a]?.[i]||0),0);
+			  return Math.min(100,(totalMes/metaMensal)*100);
+			}
+			function previsaoAnual(){
+			  const vals = totais().filter(v=>v>0);
+			  if(vals.length === 0) return 0;
+			
+			  const media = vals.reduce((a,b)=>a+b,0) / vals.length;
+			  return media * 12;
+			}
 			function atualizarTudo(){
 			const ano=anoSel(),ant=ano-1;
 			document.getElementById("totalAnual").innerText =
 			 totalAno().toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+			document.getElementById("previsao").innerText =
+				 previsaoAnual().toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 			(async ()=>{
 			  const ant = anoSel() - 1;
 			  const snap = await getDoc(doc(db,"ganhos",String(ant)));
@@ -360,6 +400,7 @@
 			animar("total_petz", totalPorAba("petz"));
 			animar("total_amazon", totalPorAba("amazon"));
 			animar("total_epseg", totalPorAba("epseg"));
+			checarQueda();
 			}
 			
 			function animar(id,valor){
@@ -375,7 +416,6 @@
 			async function gerarComparativo(ano, ant){
 			
 			  let atual = totais();
-			
 			  const snap = await getDoc(doc(db, "ganhos", String(ant)));
 			  const dadosAnt = snap.exists() ? snap.data() : {};
 			
@@ -411,44 +451,48 @@
 			      <th>Tendência</th>
 			    </tr>`;
 			
-			  meses.forEach((m,i)=>{
-			
-				if(atual[i] === 0){
+				meses.forEach((m,i)=>{
+				
+				  if(atual[i] === 0){
+				    html += `
+				    <tr class="heat-0">
+				      <td>${m}</td>
+				      <td>${antigo[i].toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</td>
+				      <td style="opacity:.5">— não informado —</td>
+				      <td>—</td>
+				      <td>—</td>
+				      <td>⏳</td>
+				    </tr>`;
+				    return;
+				  }
+				
+				  let diff = atual[i] - antigo[i];
+				  let perc = antigo[i] ? (diff/antigo[i]*100) : 0;
+				  let heat = max ? Math.min(4, Math.floor((atual[i]/max)*4)) : 0;
+				  let seta = diff > 0 ? "📈" : diff < 0 ? "📉" : "➖";
+				  let prog = progressoMes(i);
+				
 				  html += `
-				  <tr class="heat-0">
+				  <tr class="heat-${heat}">
 				    <td>${m}</td>
 				    <td>${antigo[i].toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</td>
-				    <td style="opacity:.5">— não informado —</td>
-				    <td>—</td>
-				    <td>—</td>
-				    <td>⏳</td>
+				    <td>
+				      ${atual[i].toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
+				      <div class="metaBar">
+				        <div style="width:${prog}%"></div>
+				      </div>
+				    </td>
+				    <td style="color:${diff>=0?'#22c55e':'#ef4444'}">
+				      ${diff.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
+				    </td>
+				    <td>${perc.toFixed(1)}%</td>
+				    <td>${seta}</td>
 				  </tr>`;
-				  return;
-				}
+				});
 				
-				let diff = atual[i] - antigo[i];
-				let perc = antigo[i] ? (diff/antigo[i]*100) : 0;
-			    let heat = max ? Math.min(4, Math.floor((atual[i]/max)*4)) : 0;
-			    let seta = diff > 0 ? "📈" : diff < 0 ? "📉" : "➖";
+				html += "</table>";
+				document.getElementById("comparativoMensal").innerHTML = html;
 			
-			    html += `
-			    <tr class="heat-${heat}">
-			      <td>${m}</td>
-			      <td>${antigo[i].toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</td>
-			      <td>${atual[i].toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</td>
-			      <td style="color:${diff>=0?'#22c55e':'#ef4444'}">
-			        ${diff.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
-			      </td>
-			      <td>${perc.toFixed(1)}%</td>
-			      <td>${seta}</td>
-			    </tr>`;
-			  });
-			
-			  html += "</table>";
-			
-			  document.getElementById("comparativoMensal").innerHTML = html;
-			}
-	
 			function totais(){
 			  return meses.map((_,i)=>
 			    abas.reduce((s,a)=>s+(dadosFirebase[a]?.[i]||0),0)
@@ -558,25 +602,25 @@
 			
 			  reader.readAsText(file);
 			}
-		window.addEventListener("load", async () => {
-		
-		  const anoSalvo = localStorage.getItem("anoSelecionado");
-		  if (anoSalvo) {
-		    document.getElementById("ano").value = anoSalvo;
-		  }
-		
-		  const abaSalva = localStorage.getItem("abaAtiva");
-		  if (abaSalva !== null) {
-		    trocarAba(Number(abaSalva));
-		  }
-		
-		  await carregarDados();   // ⬅ ESPERA Firebase terminar
-		
-		  atualizarStatusBackup(); 
-		});
+			window.addEventListener("load", async () => {
+			
+			 const anoSalvo = localStorage.getItem("anoSelecionado");
+			 if (anoSalvo) {
+			   document.getElementById("ano").value = anoSalvo;
+			 }
+			
+			 const abaSalva = localStorage.getItem("abaAtiva");
+			 if (abaSalva !== null) {
+			   trocarAba(Number(abaSalva));
+			 }
+			
+			 await carregarDados();   // ⬅ ESPERA Firebase terminar
+			
+			 atualizarStatusBackup(); 
+			});
 		</script>
 		<div class="assinatura">
-			<strong>by hiro v1.1</strong>
+			<strong>by hiro v2.0</strong>
 			<span>financial dashboard</span>
 		</div>
 	</body>
