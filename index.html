@@ -252,6 +252,7 @@
 			document.getElementById(id).innerHTML=html;
 			}
 			abas.forEach(criarTabela);
+			setTimeout(carregarDados, 50);
 			function lerInputsTempoReal(){
 			  let dados = {};
 			
@@ -453,10 +454,10 @@
 			}
 			
 			// só AGORA carrega os dados
-			(async ()=>{
+			window.addEventListener("load", async () => {
 			  await carregarDados();
 			  atualizarStatusBackup();
-			})();
+			});
 			
 			function atualizarStatusBackup(){
 			  const info = localStorage.getItem("ultimoBackup");
@@ -518,7 +519,9 @@
 			
 			  reader.readAsText(file);
 			}
-			
+			window.addEventListener("load", () => {
+			 atualizarStatusBackup();
+			});
 		</script>
 		<div class="assinatura">
 			<strong>by hiro v1.1</strong>
