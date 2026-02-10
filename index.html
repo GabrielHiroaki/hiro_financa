@@ -309,6 +309,8 @@
 			
 			  // Passa os dadosFirebase para atualizarTudo
 			  atualizarTudo(dadosFirebase);
+			  // Checa queda instantânea
+			  checarQueda();
 			}
 			function formatarMoeda(el){
 			let v=parseFloat(el.value.replace(/[^\d]/g,""))/100||0;
